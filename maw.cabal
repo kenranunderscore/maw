@@ -1,0 +1,41 @@
+cabal-version:   3.0
+name:            maw
+version:         0.1.0.0
+license:         MIT
+license-file:    LICENSE
+author:          Johannes Maier
+maintainer:      johannes.maier@mailbox.org
+build-type:      Simple
+
+common warnings
+  ghc-options: -Wall
+
+library
+  import:           warnings
+  exposed-modules:  Maw.Main
+  build-depends:
+    , base
+    , X11
+
+  hs-source-dirs:   src-lib
+  default-language: GHC2024
+
+executable maw
+  import:           warnings
+  main-is:          Main.hs
+  build-depends:
+    , base
+    , maw
+
+  hs-source-dirs:   src-exe
+  default-language: GHC2024
+
+test-suite maw-test
+  import:           warnings
+  default-language: GHC2024
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Main.hs
+  build-depends:
+    , base
+    , maw
