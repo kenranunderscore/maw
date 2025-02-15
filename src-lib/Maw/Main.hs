@@ -2,6 +2,7 @@ module Maw.Main where
 
 import Control.Monad (forM_)
 import Data.Bits ((.|.))
+import Data.List qualified as List
 import Graphics.X11 qualified as X
 import Graphics.X11.Xlib.Extras qualified as X
 
@@ -54,11 +55,16 @@ eventLoop dpy managedWindows = X.allocaXEvent $ \pe -> do
                                 }
                     let mask = X.cWX .|. X.cWY .|. X.cWWidth .|. X.cWHeight
                     X.configureWindow dpy window (fromIntegral mask) wc
-                    X.sync dpy False
-                    X.flush dpy
+                    X.selectInput dpy window X.structureNotifyMask
                     forM_ (zip [1 ..] managedWindows) $ \(i, w) -> do
                         placeWindow dpy w (i, length windows)
                     eventLoop dpy windows
+        X.DestroyWindowEvent{ev_window = window} -> do
+            putStrLn $ "  window destroyed: " <> show window
+            let windows = List.delete window managedWindows
+            forM_ (zip [0 ..] windows) $ \(i, w) -> do
+                placeWindow dpy w (i, length windows)
+            eventLoop dpy windows
         _ -> do
             putStrLn " ..unhandled"
             eventLoop dpy managedWindows
@@ -67,6 +73,5 @@ main :: IO ()
 main = do
     dpy <- X.openDisplay ":1"
     X.selectInput dpy (X.defaultRootWindow dpy) X.substructureRedirectMask
-    X.sync dpy False
     eventLoop dpy mempty
     X.closeDisplay dpy
