@@ -1,24 +1,28 @@
-cabal-version:   3.0
-name:            maw
-version:         0.1.0.0
-license:         MIT
-license-file:    LICENSE
-author:          Johannes Maier
-maintainer:      johannes.maier@mailbox.org
-build-type:      Simple
+cabal-version: 3.0
+name:          maw
+version:       0.1.0.0
+license:       MIT
+license-file:  LICENSE
+author:        Johannes Maier
+maintainer:    johannes.maier@mailbox.org
+build-type:    Simple
 
 common warnings
   ghc-options: -Wall
 
 library
-  import:           warnings
-  exposed-modules:  Maw.Main
+  import:             warnings
+  exposed-modules:    Maw.Main
   build-depends:
     , base
     , X11
 
-  hs-source-dirs:   src-lib
-  default-language: GHC2024
+  hs-source-dirs:     src-lib
+  default-language:   GHC2024
+  default-extensions:
+    DisambiguateRecordFields
+    NoFieldSelectors
+    OverloadedRecordDot
 
 executable maw
   import:           warnings
