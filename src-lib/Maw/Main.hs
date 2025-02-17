@@ -53,47 +53,48 @@ notifyConfigure dpy managed = X.allocaXEvent $ \p -> do
     X.setConfigureEvent p managed.window managed.window 0 0 (fromIntegral w) (fromIntegral h) 0 X.none False
     X.sendEvent dpy managed.window False X.structureNotifyMask p
 
-eventLoop :: X.Display -> [ManagedWindow] -> IO ()
-eventLoop dpy managedWindows = X.allocaXEvent $ \pe -> do
-    X.sync dpy False
-    X.nextEvent dpy pe
-    evt <- X.getEvent pe
-    print evt
-    case evt of
-        X.MapRequestEvent{ev_window = w, ev_parent = _p} -> do
-            windows <- case findManaged w managedWindows of
-                Nothing -> do
-                    let n = length managedWindows + 1
-                    managed <- addWindow dpy w n
-                    forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
-                        resizeWindow dpy m.window (i, n)
-                    pure $ managed : managedWindows
-                Just _ -> pure managedWindows
-            X.mapWindow dpy w
-            eventLoop dpy windows
-        X.ConfigureRequestEvent{ev_window = window} -> do
-            case findManaged window managedWindows of
-                Nothing -> do
-                    let n = length managedWindows + 1
-                    managed <- addWindow dpy window n
-                    let windows = managed : managedWindows
-                    forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
-                        resizeWindow dpy m.window (i, n)
-                    eventLoop dpy windows
-                Just managed -> do
-                    notifyConfigure dpy managed
-                    eventLoop dpy managedWindows
-        X.DestroyWindowEvent{ev_window = window} -> do
-            putStrLn $ "  window destroyed: " <> show window
-            let windows = unmanage window managedWindows
-            forM_ (zip [0 ..] windows) $ \(i, m) -> do
-                resizeWindow dpy m.window (i, length windows)
-            eventLoop dpy windows
-        _ -> eventLoop dpy managedWindows
+eventLoop :: X.Display -> IO ()
+eventLoop dpy = X.allocaXEvent $ \pevt ->
+    let go managedWindows = do
+            X.sync dpy False
+            X.nextEvent dpy pevt
+            evt <- X.getEvent pevt
+            print evt
+            case evt of
+                X.MapRequestEvent{ev_window = w, ev_parent = _p} -> do
+                    windows <- case findManaged w managedWindows of
+                        Nothing -> do
+                            let n = length managedWindows + 1
+                            managed <- addWindow dpy w n
+                            forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
+                                resizeWindow dpy m.window (i, n)
+                            pure $ managed : managedWindows
+                        Just _ -> pure managedWindows
+                    X.mapWindow dpy w
+                    go windows
+                X.ConfigureRequestEvent{ev_window = window} -> do
+                    case findManaged window managedWindows of
+                        Nothing -> do
+                            let n = length managedWindows + 1
+                            managed <- addWindow dpy window n
+                            let windows = managed : managedWindows
+                            forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
+                                resizeWindow dpy m.window (i, n)
+                            go windows
+                        Just managed -> do
+                            notifyConfigure dpy managed
+                            go managedWindows
+                X.DestroyWindowEvent{ev_window = window} -> do
+                    let windows = unmanage window managedWindows
+                    forM_ (zip [0 ..] windows) $ \(i, m) -> do
+                        resizeWindow dpy m.window (i, length windows)
+                    go windows
+                _ -> go managedWindows
+     in go []
 
 main :: IO ()
 main = do
     dpy <- X.openDisplay ":1"
     X.selectInput dpy (X.defaultRootWindow dpy) X.substructureRedirectMask
-    eventLoop dpy mempty
+    eventLoop dpy
     X.closeDisplay dpy
