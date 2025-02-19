@@ -8,7 +8,7 @@ maintainer:    johannes.maier@mailbox.org
 build-type:    Simple
 
 common warnings
-  ghc-options: -Wall
+  ghc-options: -Wall -Werror=overflowed-literals
 
 library
   import:             warnings
