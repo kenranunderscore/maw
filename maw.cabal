@@ -12,7 +12,10 @@ common warnings
 
 library
   import:             warnings
-  exposed-modules:    Maw.Main
+  exposed-modules:
+    Maw.Feeder
+    Maw.Main
+
   build-depends:
     , base
     , X11
@@ -27,6 +30,16 @@ library
 executable maw
   import:           warnings
   main-is:          Main.hs
+  build-depends:
+    , base
+    , maw
+
+  hs-source-dirs:   src-exe
+  default-language: GHC2024
+
+executable feeder
+  import:           warnings
+  main-is:          Feeder.hs
   build-depends:
     , base
     , maw

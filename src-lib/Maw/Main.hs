@@ -59,7 +59,6 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
             X.sync dpy False
             X.nextEvent dpy pevt
             evt <- X.getEvent pevt
-            print evt
             case evt of
                 X.MapRequestEvent{ev_window = w, ev_parent = _p} -> do
                     windows <- case findManaged w managedWindows of
@@ -89,6 +88,8 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
                     forM_ (zip [0 ..] windows) $ \(i, m) -> do
                         resizeWindow dpy m.window (i, length windows)
                     go windows
+                X.ClientMessageEvent{} -> do
+                    putStrLn "Received client message"
                 _ -> go managedWindows
      in go []
 
