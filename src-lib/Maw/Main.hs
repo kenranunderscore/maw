@@ -89,7 +89,9 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
                         resizeWindow dpy m.window (i, length windows)
                     go windows
                 X.ClientMessageEvent{} -> do
-                    putStrLn "Received client message"
+                    putStrLn "Received client message:"
+                    print evt
+                    go managedWindows
                 _ -> go managedWindows
      in go []
 
