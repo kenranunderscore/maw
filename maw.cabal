@@ -19,6 +19,7 @@ library
 
   build-depends:
     , base
+    , safe
     , X11
 
   hs-source-dirs:     src-lib
