@@ -1,4 +1,9 @@
 module Main (main) where
 
+import Test.Hspec
+
+import Maw.CommandSpec qualified
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented."
+main = hspec $ do
+    Maw.CommandSpec.spec

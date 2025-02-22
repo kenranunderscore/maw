@@ -2,6 +2,7 @@ module Maw.Feeder where
 
 import Graphics.X11 qualified as X
 import Graphics.X11.Xlib.Extras qualified as X
+
 import Maw.Command
 
 sendClientMessage :: X.Display -> ByteMessage -> IO ()
@@ -20,4 +21,5 @@ main :: IO ()
 main = do
     putStrLn "Feeder reporting for duty"
     dpy <- X.openDisplay ":1"
-    sendCommand dpy MoveRight
+    sendCommand dpy FocusRight
+    X.closeDisplay dpy

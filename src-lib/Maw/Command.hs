@@ -1,20 +1,24 @@
 module Maw.Command where
 
 import Data.Word (Word8)
+import Foreign.C (CInt)
+import GHC.Generics (Generic)
 
 data Command
-    = MoveLeft
-    | MoveRight
-    deriving stock (Show)
+    = FocusLeft
+    | FocusRight
+    deriving stock (Show, Eq, Enum, Generic)
 
 newtype ByteMessage = ByteMessage {values :: [Word8]}
-    deriving stock (Show)
+    deriving stock (Show, Eq)
 
 mkByteMessage :: [Word8] -> ByteMessage
 mkByteMessage = ByteMessage . take 20
 
 encode :: Command -> ByteMessage
-encode =
-    mkByteMessage . (\x -> [x]) . \case
-        MoveLeft -> 1
-        MoveRight -> 2
+encode cmd = mkByteMessage [fromIntegral $ fromEnum cmd]
+
+decode :: [CInt] -> Maybe Command
+decode = \case
+    b : _ -> pure . toEnum $ fromIntegral b
+    _ -> Nothing

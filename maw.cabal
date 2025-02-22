@@ -8,10 +8,14 @@ maintainer:    johannes.maier@mailbox.org
 build-type:    Simple
 
 common warnings
-  ghc-options: -Wall -Werror=overflowed-literals
+  ghc-options:        -Wall -Werror=overflowed-literals
+  default-extensions:
+    DisambiguateRecordFields
+    NoFieldSelectors
+    OverloadedRecordDot
 
 library
-  import:             warnings
+  import:           warnings
   exposed-modules:
     Maw.Command
     Maw.Feeder
@@ -22,12 +26,8 @@ library
     , safe
     , X11
 
-  hs-source-dirs:     src-lib
-  default-language:   GHC2024
-  default-extensions:
-    DisambiguateRecordFields
-    NoFieldSelectors
-    OverloadedRecordDot
+  hs-source-dirs:   src-lib
+  default-language: GHC2024
 
 executable maw
   import:           warnings
@@ -55,6 +55,10 @@ test-suite maw-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
+  other-modules:    Maw.CommandSpec
   build-depends:
     , base
+    , generic-arbitrary
+    , hspec
     , maw
+    , QuickCheck

@@ -8,6 +8,8 @@ import Graphics.X11 qualified as X
 import Graphics.X11.Xlib.Extras qualified as X
 import Safe (headMay)
 
+import Maw.Command
+
 data ManagedWindow = ManagedWindow
     { window :: X.Window
     , dimensions :: (Int, Int)
@@ -69,6 +71,23 @@ updateFocus dpy state = do
     let target = Maybe.fromMaybe X.none state.focus
     X.setInputFocus dpy target X.revertToNone X.currentTime
 
+handleCommand :: X.Display -> WMState -> Command -> IO WMState
+handleCommand dpy state cmd = do
+    let newState = Maybe.fromJust $
+            case cmd of
+                FocusRight -> do
+                    focus <- state.focus
+                    index <- List.findIndex (\m -> m.window == focus) state.windows
+                    let newIndex = min (length state.windows - 1) (index + 1)
+                    pure state{focus = Just (state.windows List.!! newIndex).window}
+                FocusLeft -> do
+                    focus <- state.focus
+                    index <- List.findIndex (\m -> m.window == focus) state.windows
+                    let newIndex = max 0 (index - 1)
+                    pure state{focus = Just (state.windows List.!! newIndex).window}
+    updateFocus dpy newState
+    pure newState
+
 eventLoop :: X.Display -> IO ()
 eventLoop dpy = X.allocaXEvent $ \pevt ->
     let go state@WMState{windows = managedWindows} = do
@@ -76,10 +95,6 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
             X.nextEvent dpy pevt
             evt <- X.getEvent pevt
             case evt of
-                X.FocusChangeEvent{ev_event_type = t} -> do
-                    when (t == X.focusIn) $ do
-                        print evt
-                    go state
                 X.MapRequestEvent{ev_window = w, ev_parent = _p} -> do
                     windows <- case findManaged w managedWindows of
                         Nothing -> do
@@ -111,13 +126,16 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
                         resizeWindow dpy m.window (i, length newState.windows)
                     updateFocus dpy newState
                     go newState
-                X.ClientMessageEvent{} -> do
-                    putStrLn "Received client message:"
-                    print evt
-                    go state
-                _ -> do
-                    putStrLn $ "    unhandled event: " <> show evt
-                    go state
+                X.ClientMessageEvent{ev_message_type = t, ev_data = bytes} -> do
+                    when (t == 127) $ do
+                        putStrLn "Received client message:"
+                        print evt
+                        case decode bytes of
+                            Just cmd -> do
+                                putStrLn $ "Received command: " <> show cmd
+                                handleCommand dpy state cmd >>= go
+                            Nothing -> go state
+                _ -> go state
      in go (WMState [] Nothing)
 
 main :: IO ()
