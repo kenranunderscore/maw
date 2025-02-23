@@ -2,6 +2,7 @@ module Maw.Main where
 
 import Control.Monad
 import Data.Bits ((.|.))
+import Data.Foldable (traverse_)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Graphics.X11 qualified as X
@@ -48,7 +49,6 @@ addWindow dpy window n = do
                 }
     let mask = X.cWX .|. X.cWY .|. X.cWWidth .|. X.cWHeight
     X.selectInput dpy window X.structureNotifyMask
-    X.grabButton dpy X.button1 X.noModMask window False X.buttonPressMask X.grabModeAsync X.grabModeAsync X.none X.none
     X.configureWindow dpy window (fromIntegral mask) wc
     pure $ ManagedWindow window (floor newWidth, fromIntegral newHeight)
 
@@ -70,6 +70,10 @@ notifyConfigure dpy managed = X.allocaXEvent $ \p -> do
 updateFocus :: X.Display -> WMState -> IO ()
 updateFocus dpy state = do
     let target = Maybe.fromMaybe X.none state.focus
+    forM_ state.windows $ \m -> do
+        when (Just m.window /= state.focus) $
+            X.grabButton dpy X.button1 X.anyModifier m.window False X.buttonPressMask X.grabModeAsync X.grabModeSync X.none X.none
+    traverse_ (X.ungrabButton dpy X.button1 X.anyModifier) state.focus
     X.setInputFocus dpy target X.revertToNone X.currentTime
 
 handleCommand :: X.Display -> WMState -> Command -> IO WMState
@@ -140,10 +144,7 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
                     newState <- pure state{focus = Just window}
                     updateFocus dpy newState
                     go newState
-                _ -> do
-                    putStrLn "unhandled:"
-                    print evt
-                    go state
+                _ -> go state
      in go (WMState [] Nothing)
 
 main :: IO ()
