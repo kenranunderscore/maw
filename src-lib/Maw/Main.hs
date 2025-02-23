@@ -100,7 +100,7 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
             X.nextEvent dpy pevt
             evt <- X.getEvent pevt
             case evt of
-                X.MapRequestEvent{ev_window = w, ev_parent = _p} -> do
+                X.MapRequestEvent{ev_window = w} -> do
                     windows <- case findManaged w managedWindows of
                         Nothing -> do
                             let n = length managedWindows + 1
