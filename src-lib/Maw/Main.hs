@@ -47,7 +47,8 @@ addWindow dpy window n = do
                 , X.wc_height = fromIntegral newHeight
                 }
     let mask = X.cWX .|. X.cWY .|. X.cWWidth .|. X.cWHeight
-    X.selectInput dpy window (X.structureNotifyMask .|. X.focusChangeMask)
+    X.selectInput dpy window X.structureNotifyMask
+    X.grabButton dpy X.button1 X.noModMask window False X.buttonPressMask X.grabModeAsync X.grabModeAsync X.none X.none
     X.configureWindow dpy window (fromIntegral mask) wc
     pure $ ManagedWindow window (floor newWidth, fromIntegral newHeight)
 
@@ -135,7 +136,14 @@ eventLoop dpy = X.allocaXEvent $ \pevt ->
                                 putStrLn $ "Received command: " <> show cmd
                                 handleCommand dpy state cmd >>= go
                             Nothing -> go state
-                _ -> go state
+                X.ButtonEvent{ev_window = window} -> do
+                    newState <- pure state{focus = Just window}
+                    updateFocus dpy newState
+                    go newState
+                _ -> do
+                    putStrLn "unhandled:"
+                    print evt
+                    go state
      in go (WMState [] Nothing)
 
 main :: IO ()
