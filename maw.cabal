@@ -23,6 +23,7 @@ library
 
   build-depends:
     , base
+    , mtl
     , safe
     , X11
 
