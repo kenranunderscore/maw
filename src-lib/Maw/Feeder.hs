@@ -2,7 +2,6 @@ module Maw.Feeder where
 
 import Graphics.X11 qualified as X
 import Graphics.X11.Xlib.Extras qualified as X
-
 import Maw.Command
 
 sendClientMessage :: X.Display -> ByteMessage -> IO ()

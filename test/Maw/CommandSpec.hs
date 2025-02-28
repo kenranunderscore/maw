@@ -3,12 +3,11 @@
 
 module Maw.CommandSpec (spec) where
 
+import Maw.Command
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck (Arbitrary (..))
 import Test.QuickCheck.Arbitrary.Generic (GenericArbitrary (..))
-
-import Maw.Command
 
 deriving via GenericArbitrary Command instance Arbitrary Command
 

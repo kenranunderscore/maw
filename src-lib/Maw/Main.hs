@@ -9,9 +9,8 @@ import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Graphics.X11 qualified as X
 import Graphics.X11.Xlib.Extras qualified as X
-import Safe (headMay)
-
 import Maw.Command
+import Safe (headMay)
 
 data ManagedWindow = ManagedWindow
     { window :: X.Window
@@ -71,7 +70,17 @@ notifyConfigure :: X.Display -> ManagedWindow -> IO ()
 notifyConfigure dpy managed = X.allocaXEvent $ \p -> do
     X.setEventType p X.configureNotify
     let (w, h) = managed.dimensions
-    X.setConfigureEvent p managed.window managed.window 0 0 (fromIntegral w) (fromIntegral h) 0 X.none False
+    X.setConfigureEvent
+        p
+        managed.window
+        managed.window
+        0
+        0
+        (fromIntegral w)
+        (fromIntegral h)
+        0
+        X.none
+        False
     X.sendEvent dpy managed.window False X.structureNotifyMask p
 
 updateFocus :: X.Display -> WMState -> IO ()
@@ -79,7 +88,17 @@ updateFocus dpy state = do
     let target = Maybe.fromMaybe X.none state.focus
     forM_ state.windows $ \m -> do
         when (Just m.window /= state.focus) $
-            X.grabButton dpy X.button1 X.anyModifier m.window False X.buttonPressMask X.grabModeAsync X.grabModeSync X.none X.none
+            X.grabButton
+                dpy
+                X.button1
+                X.anyModifier
+                m.window
+                False
+                X.buttonPressMask
+                X.grabModeAsync
+                X.grabModeSync
+                X.none
+                X.none
     traverse_ (X.ungrabButton dpy X.button1 X.anyModifier) state.focus
     X.setInputFocus dpy target X.revertToNone X.currentTime
 

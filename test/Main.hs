@@ -1,8 +1,7 @@
 module Main (main) where
 
-import Test.Hspec
-
 import Maw.CommandSpec qualified
+import Test.Hspec
 
 main :: IO ()
 main = hspec $ do
