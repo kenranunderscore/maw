@@ -41,8 +41,8 @@ unmanage w state =
 defaultWindowChanges :: X.WindowChanges
 defaultWindowChanges = X.WindowChanges 0 0 0 0 0 X.none 0
 
-addWindow :: X.Display -> X.Window -> Int -> IO ManagedWindow
-addWindow dpy window n = do
+manage :: X.Display -> X.Window -> Int -> IO ManagedWindow
+manage dpy window n = do
     let screenWidth = X.displayWidth dpy (X.defaultScreen dpy)
     let newWidth :: Float = realToFrac screenWidth / realToFrac n
     let newHeight = X.displayHeight dpy (X.defaultScreen dpy)
@@ -119,52 +119,45 @@ handleCommand dpy state cmd = do
     updateFocus dpy newState
     pure newState
 
+addWindow :: X.Display -> X.Window -> WM ManagedWindow
+addWindow dpy w = do
+    managedWindows <- State.gets (.windows)
+    case findManaged w managedWindows of
+        Nothing -> do
+            let n = length managedWindows + 1
+            -- FIXME: manage -> WM
+            managed <- io $ manage dpy w n
+            let windows = managed : managedWindows
+            forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
+                io $ resizeWindow dpy m.window (i, n)
+            State.modify' $ \s -> s{windows}
+            pure managed
+        Just m -> pure m
+
 eventLoop :: X.Display -> X.XEventPtr -> WM ()
 eventLoop dpy pevt = go
   where
-    go = do
+    go = forever $ do
         io $ X.sync dpy False
         io $ X.nextEvent dpy pevt
         state <- State.get
         evt <- io $ X.getEvent pevt
         case evt of
             X.MapRequestEvent{ev_window = w} -> do
-                let managedWindows = state.windows
-                windows <- case findManaged w managedWindows of
-                    Nothing -> do
-                        let n = length managedWindows + 1
-                        -- FIXME: addWindow -> WM
-                        managed <- io $ addWindow dpy w n
-                        forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
-                            io $ resizeWindow dpy m.window (i, n)
-                        pure $ managed : managedWindows
-                    Just _ -> pure managedWindows
+                void $ addWindow dpy w
                 io $ X.mapWindow dpy w
-                let newState = state{windows, focus = Just w}
+                State.modify' $ \s -> s{focus = Just w}
+                newState <- State.get
                 io $ updateFocus dpy newState
-                State.put newState
-                go
-            X.ConfigureRequestEvent{ev_window = window} -> do
-                let managedWindows = state.windows
-                case findManaged window managedWindows of
-                    Nothing -> do
-                        let n = length managedWindows + 1
-                        managed <- io $ addWindow dpy window n
-                        let windows = managed : managedWindows
-                        forM_ (zip [1 ..] managedWindows) $ \(i, m) -> do
-                            io $ resizeWindow dpy m.window (i, n)
-                        State.put state{windows}
-                        go
-                    Just managed -> do
-                        io $ notifyConfigure dpy managed
-                        go
+            X.ConfigureRequestEvent{ev_window = w} -> do
+                managed <- addWindow dpy w
+                io $ notifyConfigure dpy managed
             X.DestroyWindowEvent{ev_window = window} -> do
                 let newState = unmanage window state
                 forM_ (zip [0 ..] newState.windows) $ \(i, m) -> do
                     io $ resizeWindow dpy m.window (i, length newState.windows)
                 io $ updateFocus dpy newState
                 State.put newState
-                go
             X.ClientMessageEvent{ev_message_type = t, ev_data = bytes} -> do
                 when (t == 127) $ do
                     io $ putStrLn "Received client message:"
@@ -174,14 +167,12 @@ eventLoop dpy pevt = go
                             io $ putStrLn $ "Received command: " <> show cmd
                             newState <- io $ handleCommand dpy state cmd
                             State.put newState
-                            go
-                        Nothing -> go
+                        Nothing -> pure ()
             X.ButtonEvent{ev_window = window} -> do
                 newState <- pure state{focus = Just window}
                 io $ updateFocus dpy newState
                 State.put newState
-                go
-            _ -> go
+            _ -> io $ putStrLn "  got unhandled event"
 
 main :: IO ()
 main = do
